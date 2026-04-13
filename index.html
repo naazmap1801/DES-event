@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reinventing Productivity — Interactive Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:#F7F5F1;color:#1A2B3C}
+.header{background:#0D1F35;padding:1.25rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-title{font-family:'Libre Baskerville',serif;font-size:1rem;color:#fff;line-height:1.3}
+.header-sub{font-size:10px;color:#FFFFFF;text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+.header-stats{display:flex;gap:1.5rem}
+.hs{text-align:right}
+.hs-n{font-family:'Libre Baskerville',serif;font-size:1.25rem;color:#B8924A}
+.hs-l{font-size:10px;color:#5A7A9A}
+.tab-bar{background:#0D1F35;border-top:1px solid #1A3352;display:flex;gap:0;padding:0 2rem}
+.tab-btn{padding:.75rem 1.25rem;font-size:12px;font-weight:500;color:#5A7A9A;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab-btn:hover{color:#fff}
+.tab-btn.active{color:#B8924A;border-bottom-color:#B8924A}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.breadcrumb{padding:.6rem 2rem;background:#132840;display:flex;align-items:center;gap:8px;min-height:38px}
+.bc-item{font-size:12px;color:#5A7A9A;cursor:pointer;transition:color .15s;white-space:nowrap}
+.bc-item:hover{color:#B8924A}
+.bc-item.active{color:#fff;font-weight:500;cursor:default}
+.bc-sep{font-size:10px;color:#2A4A6E}
+.bc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.main{padding:2rem;max-width:1000px;margin:0 auto}
+.level-header{margin-bottom:1.5rem}
+.level-label{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#7A8E9F;margin-bottom:.4rem}
+.level-title{font-family:'Libre Baskerville',serif;font-size:1.5rem;color:#0D1F35;margin-bottom:.3rem}
+.level-desc{font-size:13px;color:#4A5E72;line-height:1.65}
+.back-btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#4A5E72;cursor:pointer;padding:5px 12px;border:1px solid #E2DDD6;border-radius:20px;background:#fff;margin-bottom:1.25rem;transition:all .15s}
+.back-btn:hover{background:#0D1F35;color:#fff;border-color:#0D1F35}
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar-item{display:grid;grid-template-columns:200px 1fr 50px;gap:12px;align-items:center;cursor:pointer;padding:10px 14px;border-radius:8px;border:1px solid transparent;background:#fff;transition:all .18s;position:relative;overflow:hidden}
+.bar-item::after{content:'›';position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#C8C0B4;transition:all .15s}
+.bar-item:hover{border-color:currentColor;transform:translateX(4px)}
+.bar-item:hover::after{color:currentColor;right:10px}
+.bar-label{font-size:13px;font-weight:500;color:#1A2B3C;line-height:1.35;padding-right:8px}
+.bar-sublabel{font-size:11px;color:#7A8E9F;margin-top:2px}
+.bar-track{height:10px;background:#EDE9E3;border-radius:5px;overflow:hidden}
+.bar-fill{height:10px;border-radius:5px;transition:width .6s cubic-bezier(.4,0,.2,1);opacity:.85}
+.bar-item:hover .bar-fill{opacity:1}
+.bar-count{font-size:13px;font-weight:600;color:#1A2B3C;text-align:right}
+.slide-in{animation:slideIn .3s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.session-card{background:#fff;border-radius:12px;border:1px solid #E2DDD6;overflow:hidden;margin-bottom:12px}
+.session-card-header{padding:1.25rem 1.5rem;border-left:4px solid}
+.session-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:.5rem}
+.session-card-title{font-size:15px;font-weight:600;color:#0D1F35;line-height:1.4;flex:1}
+.session-format{font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;margin-top:3px}
+.session-card-sub{font-size:12px;color:#4A5E72;line-height:1.6}
+.session-card-body{padding:1.25rem 1.5rem;border-top:1px solid #F0EDE8}
+.sc-section-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#7A8E9F;margin-bottom:.65rem}
+.company-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.25rem}
+.co-item{background:#F7F5F1;border-radius:8px;padding:.65rem .85rem;border:1px solid #E2DDD6}
+.co-item-header{display:flex;align-items:baseline;gap:7px;margin-bottom:3px}
+.co-item-name{font-size:12px;font-weight:600;color:#0D1F35}
+.co-item-sector{font-size:10px;color:#7A8E9F;background:#fff;padding:1px 6px;border-radius:10px;border:1px solid #E2DDD6}
+.co-item-what{font-size:11px;color:#4A5E72;line-height:1.5;margin-bottom:4px}
+.co-item-role{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px solid #C8C0B4;background:#fff;color:#4A5E72;display:inline-block}
+.outcomes-box{background:#0D1F35;border-radius:8px;padding:1rem 1.25rem}
+.outcomes-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#B8924A;margin-bottom:.6rem}
+.outcome-row{display:flex;gap:8px;margin-bottom:4px;font-size:12px;color:#8AAAC4;line-height:1.55}
+.outcome-dot{width:5px;height:5px;border-radius:50%;background:#B8924A;flex-shrink:0;margin-top:6px}
+
+/* TOPICS TAB */
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.5rem;padding-top:.25rem}
+.filter-btn{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #E2DDD6;background:#fff;color:#4A5E72;transition:all .12s}
+.filter-btn:hover{border-color:#0D1F35;color:#0D1F35}
+.filter-btn.on{background:#0D1F35;color:#fff;border-color:#0D1F35}
+.fn-block{margin-bottom:2rem}
+.fn-block-header{display:flex;align-items:center;gap:12px;padding:1rem 1.5rem;border-radius:10px 10px 0 0}
+.fn-block-av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.fn-block-name{font-size:15px;font-weight:600;color:#fff}
+.fn-block-roles{font-size:11px;color:#FFF;margin-top:2px}
+.fn-block-invite{font-size:10px;color:#fff;margin-top:3px}
+.topic-cards{background:#fff;border:1px solid #E2DDD6;border-top:none;border-radius:0 0 10px 10px;overflow:hidden}
+.topic-row{border-bottom:1px solid #F0EDE8}
+.topic-row:last-child{border-bottom:none}
+.topic-top{padding:1rem 1.5rem;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;transition:background .1s}
+.topic-top:hover{background:#FAFAF8}
+.t-num{font-size:10px;color:#7A8E9F;font-weight:600;margin-bottom:3px}
+.t-title{font-size:13px;font-weight:600;color:#0D1F35;line-height:1.4;margin-bottom:3px}
+.t-sub{font-size:11px;color:#4A5E72;line-height:1.5;margin-bottom:6px}
+.t-pills{display:flex;gap:5px;flex-wrap:wrap}
+.t-pill{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.topic-chev{font-size:12px;color:#C8C0B4;padding-top:4px;transition:transform .2s;flex-shrink:0}
+.topic-body{display:none;padding:.5rem 1.5rem 1.25rem;border-top:1px solid #F0EDE8;background:#FAFAF8}
+.topic-body.open{display:block}
+.tb-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#7A8E9F;margin:.85rem 0 .55rem}
+.tb-label:first-child{margin-top:.35rem}
+.tb-companies{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tb-co{background:#fff;border:1px solid #E2DDD6;border-radius:8px;padding:.65rem .85rem}
+.tb-co-hd{display:flex;align-items:baseline;gap:7px;margin-bottom:3px;flex-wrap:wrap}
+.tb-co-name{font-size:12px;font-weight:600;color:#0D1F35}
+.tb-co-sec{font-size:10px;color:#7A8E9F;background:#F7F5F1;padding:1px 6px;border-radius:10px;border:1px solid #E2DDD6}
+.tb-co-what{font-size:11px;color:#4A5E72;line-height:1.5;margin-bottom:4px}
+.tb-co-role{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px solid #C8C0B4;background:#fff;color:#4A5E72;display:inline-block}
+.tb-outcomes{background:#0D1F35;border-radius:8px;padding:.85rem 1.1rem;margin-top:.85rem}
+.tb-out-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#B8924A;margin-bottom:.5rem}
+.tb-out-row{display:flex;gap:7px;font-size:11px;color:#8AAAC4;line-height:1.55;margin-bottom:3px}
+.tb-out-dot{width:4px;height:4px;border-radius:50%;background:#B8924A;flex-shrink:0;margin-top:7px}
+
+@media(max-width:620px){
+  .header-stats{display:none}
+  .main{padding:1rem}
+  .bar-item{grid-template-columns:130px 1fr 36px}
+  .bar-label{font-size:11px}
+  .company-list,.tb-companies{grid-template-columns:1fr}
+  .tab-btn{padding:.65rem .85rem;font-size:11px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">Reinventing Productivity to Stay Competitive</div>
+    <div class="header-sub">Interactive Explorer · Mexico Sector Leaders Summit 2026</div>
+  </div>
+  <div class="header-stats">
+    <div class="hs"><div class="hs-n">9,146</div><div class="hs-l">Initiatives</div></div>
+    <div class="hs"><div class="hs-n">20</div><div class="hs-l">Sectors</div></div>
+    <div class="hs"><div class="hs-n">216</div><div class="hs-l">Companies</div></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tab-bar">
+  <div class="tab-btn active" onclick="switchTab('explorer',this)">Data Explorer</div>
+  <div class="tab-btn" onclick="switchTab('topics',this)">Topics &amp; Companies</div>
+</div>
+
+<!-- TAB 1: EXPLORER -->
+<div class="tab-panel active" id="tab-explorer">
+  <div class="breadcrumb" id="breadcrumb">
+    <div class="bc-item active">All subthemes</div>
+  </div>
+  <div class="main">
+    <div id="content"></div>
+  </div>
+</div>
+
+<!-- TAB 2: TOPICS & COMPANIES -->
+<div class="tab-panel" id="tab-topics">
+  <div class="main">
+    <div style="margin-bottom:1.5rem;padding-top:.25rem">
+      <div style="font-family:'Libre Baskerville',serif;font-size:1.4rem;color:#0D1F35;margin-bottom:.35rem">Session Topics &amp; Companies to Invite</div>
+      <div style="font-size:13px;color:#4A5E72;line-height:1.65;max-width:640px">14 sessions across 6 leadership functions. Each session includes the specific companies to invite, the role within each company, and the outcomes the session is designed to deliver. Click any session to expand.</div>
+    </div>
+    <div class="filter-bar" id="filter-bar">
+      <div class="filter-btn on" onclick="filterFn('all',this)">All functions</div>
+      <div class="filter-btn" onclick="filterFn('ops',this)">Operations</div>
+      <div class="filter-btn" onclick="filterFn('fin',this)">Finance</div>
+      <div class="filter-btn" onclick="filterFn('tech',this)">Technology</div>
+      <div class="filter-btn" onclick="filterFn('esg',this)">Sustainability</div>
+      <div class="filter-btn" onclick="filterFn('ppl',this)">People</div>
+      <div class="filter-btn" onclick="filterFn('str',this)">Strategy</div>
+    </div>
+    <div id="topics-content"></div>
+  </div>
+</div>
+
+<script>
+// ── DATA: EXPLORER ──────────────────────────────────────────────
+const subthemes=[
+  {id:'process',name:'Process Digitization',count:784,pct:'8.6%',color:'#1B6CA8'},
+  {id:'data',name:'Data & Intelligent Systems',count:615,pct:'6.7%',color:'#2A7D5F'},
+  {id:'energy',name:'Energy & Climate Alignment',count:605,pct:'6.6%',color:'#B85C00'},
+  {id:'cost',name:'Cost & Margin Discipline',count:450,pct:'4.9%',color:'#6B3FA0'},
+  {id:'innov',name:'Innovation & Capability Development',count:389,pct:'4.3%',color:'#A0285A'},
+  {id:'work',name:'Workforce Transformation & Skills',count:348,pct:'3.8%',color:'#1A6B6B'},
+  {id:'resource',name:'Resource Circularity & Security',count:312,pct:'3.4%',color:'#3D7A2A'},
+  {id:'supply',name:'Supply Chain Reinforcement',count:168,pct:'1.8%',color:'#7A4A1A'},
+  {id:'eco',name:'Ecosystem Partnerships & Investments',count:159,pct:'1.7%',color:'#1A4A8A'},
+  {id:'asset',name:'Asset Optimization & Footprint',count:117,pct:'1.3%',color:'#6B5A1A'},
+];
+
+const sectors={
+  process:[{s:'Electricity Services',n:227},{s:'Real Estate',n:206},{s:'Construction',n:109},{s:'Plastics Manufacturing',n:81},{s:'Animal Breeding & Livestock',n:55},{s:'Professional Services',n:49},{s:'Chemical Manufacturing',n:40},{s:'Agriculture',n:17}],
+  data:[{s:'Electricity Services',n:180},{s:'Plastics Manufacturing',n:115},{s:'Animal Breeding & Livestock',n:98},{s:'Real Estate',n:96},{s:'Construction',n:42},{s:'Chemical Manufacturing',n:39},{s:'Agriculture',n:25},{s:'Professional Services',n:20}],
+  energy:[{s:'Hotels & Restaurants',n:215},{s:'Professional Services',n:128},{s:'Transport & Storage',n:92},{s:'Health & Social Care',n:72},{s:'Finance & Insurance',n:64},{s:'Education Services',n:21},{s:'Electricity Services',n:13}],
+  cost:[{s:'Automobile Manufacturing',n:104},{s:'Electricity Services',n:102},{s:'Chemical Manufacturing',n:74},{s:'Electronics & Electrical',n:50},{s:'Autoparts Manufacturing',n:42},{s:'Food Manufacturing',n:40},{s:'Beverage Manufacturing',n:38}],
+  innov:[{s:'Electricity Services',n:299},{s:'Chemical Manufacturing',n:36},{s:'Plastics Manufacturing',n:31},{s:'Animal Breeding & Livestock',n:8},{s:'Agriculture',n:7},{s:'Real Estate',n:4},{s:'Construction',n:4}],
+  work:[{s:'Electricity Services',n:171},{s:'Real Estate',n:36},{s:'Construction',n:36},{s:'Plastics Manufacturing',n:33},{s:'Chemical Manufacturing',n:32},{s:'Animal Breeding & Livestock',n:25},{s:'Agriculture',n:12}],
+  resource:[{s:'Chemical Manufacturing',n:97},{s:'Food Manufacturing',n:58},{s:'Autoparts Manufacturing',n:56},{s:'Electricity Services',n:47},{s:'Beverage Manufacturing',n:41},{s:'Automobile Manufacturing',n:5}],
+  supply:[{s:'Chemical Manufacturing',n:71},{s:'Automobile Manufacturing',n:55},{s:'Autoparts Manufacturing',n:12},{s:'Food Manufacturing',n:8},{s:'Electronics & Electrical',n:8},{s:'Beverage Manufacturing',n:7}],
+  eco:[{s:'Education Services',n:125},{s:'Professional Services',n:23},{s:'Hotels & Restaurants',n:5},{s:'Electricity Services',n:3},{s:'Transport & Storage',n:3}],
+  asset:[{s:'Beverage Manufacturing',n:37},{s:'Food Manufacturing',n:34},{s:'Autoparts Manufacturing',n:20},{s:'Chemical Manufacturing',n:13},{s:'Automobile Manufacturing',n:10},{s:'Electronics & Electrical',n:3}],
+};
+
+const functions={
+  process:[{fn:'ESG & Sustainability',role:'CSO · VP ESG',n:159},{fn:'Capital & Capability',role:'CFO · CTO · Head of Transformation',n:158},{fn:'Revenue Growth',role:'CEO · CCO · VP Commercial',n:152},{fn:'Margin & Operations',role:'COO · VP Operations',n:38},{fn:'Risk & Resilience',role:'CRO · CISO',n:22}],
+  data:[{fn:'Revenue Growth',role:'CEO · CCO · VP Commercial',n:158},{fn:'Capital & Capability',role:'CFO · CTO · Head of Innovation',n:157},{fn:'ESG & Sustainability',role:'CSO · VP ESG',n:114},{fn:'Margin & Operations',role:'COO · VP Operations',n:47},{fn:'Risk & Resilience',role:'CRO · CISO',n:23}],
+  energy:[{fn:'Capital & Capability',role:'CFO · Head of Energy Strategy',n:63},{fn:'Revenue Growth',role:'CEO · CCO · VP Strategy',n:41},{fn:'ESG & Sustainability',role:'CSO · Head of Climate',n:38},{fn:'Risk & Resilience',role:'CRO · Head of Risk',n:17},{fn:'Margin & Operations',role:'COO · VP Operations',n:11}],
+  cost:[{fn:'Capital & Capability',role:'CFO · CTO · Head of Transformation',n:156},{fn:'Revenue Growth',role:'CEO · CCO · VP Commercial',n:141},{fn:'ESG & Sustainability',role:'CSO · VP ESG',n:102},{fn:'Margin & Operations',role:'COO · VP Operations',n:44},{fn:'Risk & Resilience',role:'CRO',n:7}],
+  innov:[{fn:'ESG & Sustainability',role:'CSO · VP ESG',n:120},{fn:'Revenue Growth',role:'CEO · CCO',n:116},{fn:'Capital & Capability',role:'CTO · Head of Innovation',n:99},{fn:'Margin & Operations',role:'COO · VP Operations',n:27},{fn:'Risk & Resilience',role:'CRO · Head of Risk',n:23}],
+  work:[{fn:'Capital & Capability',role:'CHRO · CFO · Head of Transformation',n:112},{fn:'ESG & Sustainability',role:'CSO · CHRO · VP ESG',n:101},{fn:'Revenue Growth',role:'CEO · CCO',n:68},{fn:'Risk & Resilience',role:'CRO · Head of People Risk',n:20},{fn:'Margin & Operations',role:'COO',n:8}],
+  resource:[{fn:'Revenue Growth',role:'CEO · CCO · VP Commercial',n:113},{fn:'Capital & Capability',role:'CFO · COO · Head of Procurement',n:88},{fn:'ESG & Sustainability',role:'CSO · VP ESG',n:88},{fn:'Margin & Operations',role:'COO · VP Operations',n:21},{fn:'Risk & Resilience',role:'CRO',n:2}],
+  supply:[{fn:'Capital & Capability',role:'COO · CFO · Head of Procurement',n:61},{fn:'Revenue Growth',role:'CEO · CCO · VP Commercial',n:47},{fn:'ESG & Sustainability',role:'CSO · VP ESG',n:38},{fn:'Margin & Operations',role:'COO · VP Supply Chain',n:20},{fn:'Risk & Resilience',role:'CRO · CSCO',n:2}],
+  eco:[{fn:'Capital & Capability',role:'CTO · CFO · Head of Corporate Development',n:97},{fn:'ESG & Sustainability',role:'CSO · VP ESG',n:26},{fn:'Revenue Growth',role:'CEO · CCO',n:5}],
+  asset:[{fn:'Revenue Growth',role:'CEO · CCO · VP Commercial',n:39},{fn:'Capital & Capability',role:'CFO · COO · Head of Strategy',n:33},{fn:'ESG & Sustainability',role:'CSO · VP ESG',n:28},{fn:'Margin & Operations',role:'COO · VP Operations',n:12},{fn:'Risk & Resilience',role:'CRO',n:5}],
+};
+
+const drillSessions={
+  'ESG & Sustainability':{title:'Energy Transition as a Competitive Lever: From Operational Cost Reduction to Market Advantage',sub:'Turning climate investment into measurable competitive gains',format:'Panel Discussion',fc:'#E1F5EE',ft:'#085041',companies:[{name:'Dow Chemicals',sector:'Chemical',what:'Advancing a small modular nuclear reactor with X-energy — highest-ambition energy investment in the dataset.',role:'CSO / Head of Energy Strategy'},{name:'Coca-Cola FEMSA',sector:'Beverage',what:'Electric boilers powered entirely by solar panels — clean industrial heat investment with a replicable capital structure.',role:'CSO / VP Sustainability'},{name:'Grupo Bimbo',sector:'Food Manufacturing',what:'100% renewable electricity commitment. Fleet EV transition. Multiple energy targets embedded as hard operational deadlines.',role:'CSO / Head of Environmental Strategy'},{name:'AB InBev',sector:'Beverage Manufacturing',what:'Framed water stewardship as operational cost and resilience strategy — translating sustainability into financial language.',role:'CSO / VP Sustainability'},{name:'Alpek',sector:'Chemical Manufacturing',what:'Running circularity programmes with active CFO co-ownership — demonstrates embedding sustainability in the capital plan.',role:'CSO / VP Finance for Sustainability'}],outcomes:['A sector energy ambition ladder: realistic entry points and competitive return expectations by sector and company size','Cross-sector energy partnership opportunities — PPA sharing, co-investment in generation, joint procurement identified','A shared framework for calculating competitive return on sustainability investment beyond carbon metrics']},
+  'Capital & Capability':{title:'AI for Competitive Productivity: The Build, Buy, or Configure Decision That Defines Your Digital Decade',sub:'What companies that built proprietary AI, deployed third-party platforms, and configured existing tools have actually learned',format:'Panel Discussion',fc:'#EEEDFE',ft:'#3C3489',companies:[{name:'JLL',sector:'Real Estate',what:'Built Azara — proprietary AI for corporate real estate data analysis. Total cost of ownership vs. off-the-shelf.',role:'CTO / Chief Digital Officer'},{name:'Nemak',sector:'Autoparts',what:'Built NorisGPT for manufacturing process monitoring — industrial operator who built sector-specific AI without a tech background.',role:'CTO / Head of Digital Manufacturing'},{name:'ITESM',sector:'Education',what:'Built TechGPT and made it openly available — speaks to the gap between building AI capability and achieving adoption.',role:'VP Innovation / CTO'},{name:'Repsol Downstream',sector:'Wholesale Trade',what:'Deployed AI across all business areas using existing infrastructure — the configure-and-scale approach.',role:'CTO / Head of Digital Transformation'},{name:'TC Energy',sector:'Electricity Services',what:'Managing parallel multi-billion capital programmes with different risk profiles and return timelines simultaneously.',role:'CFO / VP Capital Projects Finance'},{name:'Dow Chemicals',sector:'Chemical',what:'Delayed the Flex-2 capital project to protect near-term cash while continuing other investments — public sequencing decision.',role:'CFO / Head of Capital Allocation'}],outcomes:['A sector-by-sector AI pathway map — which entry approach delivers fastest productivity gain at which digital maturity stage','Real total cost of ownership benchmarks for build, buy, and configure across different company sizes and sectors','A capital sequencing framework for productivity investment — ranked by competitive return per peso, by sector context']},
+  'Revenue Growth':{title:'Growing Smarter, Not Just Bigger: Ensuring Geographic Expansion Drives Competitiveness, Not Just Scale',sub:'When market expansion improves productivity and competitive position — and when it dilutes both',format:'CEO Panel',fc:'#EAF3DE',ft:'#3B6D11',companies:[{name:'Grupo Bimbo',sector:'Food Manufacturing',what:'Global expansion at scale while sustaining operational productivity — one of the few companies demonstrably doing both simultaneously.',role:'CEO / Chief Strategy Officer'},{name:'Gentera',sector:'Finance & Insurance',what:'Expanded service network to 553 offices — speaks to what growth did to cost per client across markets at different maturity stages.',role:'CEO / Chief Strategy Officer'},{name:'Grupo Ruba',sector:'Construction',what:'Opened six new cities simultaneously while consolidating existing operations — rapid geographic entry across very different markets.',role:'CEO / VP Strategy'},{name:'NatureSweet',sector:'Agriculture',what:'Tripled home delivery service area — expansion with direct unit economics consequences relevant to most mid-market companies.',role:'CEO / COO'},{name:'Cargill de México',sector:'Animal Breeding',what:'Launched Seascale Energy joint venture with Hafnia — cross-sector supply security decision made proactively, not reactively.',role:'CEO / Chief Strategy Officer'}],outcomes:['A growth quality framework: criteria for evaluating whether expansion improves or dilutes competitive productivity','Peer benchmarks on unit economics before and after geographic expansion — what improvement looks like in real numbers','Cross-sector connections between CEOs managing similar expansion decisions in different market contexts']},
+  'Margin & Operations':{title:'Turning Automation into Operational Advantage: Scaling What Works Across the Entire Business',sub:'Moving from successful pilots to full-scale deployment — the decisions that determine whether AI delivers lasting competitive gains',format:'Panel Discussion',fc:'#FDF0E6',ft:'#B85C00',companies:[{name:'Nemak',sector:'Autoparts Manufacturing',what:'Deployed NorisGPT for real-time process monitoring — integrating AI with existing line management without disrupting output.',role:'VP Operations / Head of Digital Manufacturing'},{name:'Toyota',sector:'Automobile Manufacturing',what:'Injected AI into quality management plant-wide. Invested in automation to run three production shifts instead of two.',role:'VP Manufacturing / Head of Production Systems'},{name:'Penoles',sector:'Electricity Services',what:'Deployed automation to increase productivity and improve safety simultaneously in a high-consequence environment.',role:'VP Operations / Head of Technology Integration'},{name:'Grupo Bafar',sector:'Food Manufacturing',what:'IBP technology with IoT and AI for logistics — one of the few Food companies running operational AI at meaningful scale.',role:'COO / Head of Supply Chain Operations'},{name:'Stellantis',sector:'Automobile Manufacturing',what:'Closed assembly plants while developing new EV lines — rationalisation and expansion with the same workforce simultaneously.',role:'VP Manufacturing / Head of Industrial Operations'}],outcomes:['A scaling readiness framework — conditions under which full deployment delivers competitive gains vs. compounds costs','Cross-sector peer connections between companies at different automation stages with confirmed follow-up meetings','A shared deployment benchmark: what a successful cross-facility rollout looks like by sector']},
+  'Risk & Resilience':{title:'Protecting Your Productivity Infrastructure: Cybersecurity as Operational Resilience and Competitive Necessity',sub:'As digital investment grows, so does exposure — securing AI and automation assets without slowing transformation',format:'Live Scenario',fc:'#FCEBEB',ft:'#791F1F',companies:[{name:'Dow Chemicals',sector:'Chemical Manufacturing',what:'Runs cyber crisis simulations designed around OT threats — most mature industrial cybersecurity programme in the dataset.',role:'CTO / CISO / Head of OT Security'},{name:'Acciona Energy México',sector:'Electricity Services',what:'ISO 27001/2022 certified. Tracks cybersecurity as board-level strategic risk. 95% supplier risk visibility.',role:'CTO / CISO / Director of Information Security'},{name:'Sonoco',sector:'Plastics Manufacturing',what:'Implementing the NIST Cybersecurity Framework — a structured approach directly replicable across sectors.',role:'CTO / CISO'},{name:'Linde Mexico',sector:'Chemical Manufacturing',what:'Mandatory cybersecurity training across the workforce — addressing the human layer most technical frameworks leave exposed.',role:'CTO / Head of IT Security'}],outcomes:['A cyber resilience audit template for productivity infrastructure — each participant leaves with a scored self-assessment','A sector-appropriate security framework recommendation: which standard fits which digital maturity level','Peer introductions between companies with mature OT security programmes and those building theirs']},
+};
+
+// ── DATA: TOPICS TAB ────────────────────────────────────────────
+const topicFunctions=[
+  {
+    id:'ops', name:'Operations', label:'COO · VP Manufacturing · VP Supply Chain · Head of Operations',
+    invite:'Invite from: Chemical · Auto · Autoparts · Food · Beverage · Electricity · Plastics · Construction · Agriculture',
+    avBg:'#1A4A35', avColor:'#6FCAA0', avLabel:'OPS', hdrBg:'#0D2B1F',
+    sessions:[
+      {
+        num:'01', fmt:'Panel Discussion', fmtBg:'#E1F5EE', fmtColor:'#085041',
+        subthemes:['Process Digitization','Data & Intelligent Systems'],
+        title:'Turning Automation into Operational Advantage: Scaling What Works Across the Entire Business',
+        sub:'Moving from successful pilots to full-scale deployment — the decisions that determine whether AI delivers lasting competitive gains',
+        companies:[
+          {name:'Nemak',sector:'Autoparts Manufacturing',what:'Deployed NorisGPT for real-time process monitoring across facilities — direct experience integrating AI with existing line management.',role:'VP Operations / Head of Digital Manufacturing'},
+          {name:'Toyota',sector:'Automobile Manufacturing',what:'Injected AI into quality management system plant-wide. Invested in automation to run three production shifts instead of two.',role:'VP Manufacturing / Head of Production Systems'},
+          {name:'Penoles',sector:'Electricity Services',what:'Automation to increase productivity and improve safety simultaneously in a high-consequence extractive environment.',role:'VP Operations / Head of Technology Integration'},
+          {name:'Grupo Bafar',sector:'Food Manufacturing',what:'IBP technology integrated with IoT and AI for logistics — one of the few Food companies running operational AI at meaningful scale.',role:'COO / Head of Supply Chain Operations'},
+          {name:'Dow Chemicals',sector:'Chemical Manufacturing',what:'Rolling out smart plant operations using drones and robots. AI accelerating manufacturing across multiple facilities.',role:'VP Manufacturing / Head of Operations Technology'},
+          {name:'Grupo Posadas',sector:'Hotels & Restaurants',what:'Almost no operational AI initiatives — invited to represent sectors at the start of the journey. Their questions shape the discussion.',role:'COO / VP Operations'},
+        ],
+        outcomes:['A scaling readiness framework — conditions under which full deployment delivers competitive gains vs. compounds costs','Cross-sector peer connections between companies at different automation stages with confirmed follow-up meetings','A shared deployment benchmark: what a successful cross-facility rollout looks like by sector'],
+      },
+      {
+        num:'02', fmt:'Panel Discussion', fmtBg:'#E1F5EE', fmtColor:'#085041',
+        subthemes:['Cost & Margin Discipline','Asset Optimization & Footprint'],
+        title:'Optimising Your Footprint to Compete: Managing Rationalisation and Expansion at the Same Time',
+        sub:'How leading operators are closing underperforming assets while building new capacity — and maintaining operational strength through both',
+        companies:[
+          {name:'Stellantis',sector:'Automobile Manufacturing',what:'Closed assembly plants while developing new EV lines — managing the same workforce through contraction and expansion simultaneously.',role:'VP Manufacturing / Head of Industrial Operations'},
+          {name:'Valeo',sector:'Autoparts Manufacturing',what:'Cutting 1,000 jobs in Europe while strengthening local Mexican supply partnerships — deliberate footprint reorientation toward competitive cost structures.',role:'COO / VP Global Operations'},
+          {name:'PPG Comex',sector:'Chemical Manufacturing',what:'Closed coatings assets to sharpen footprint focus while opening new market positions — rationalisation releasing capital for higher-return investments.',role:'COO / VP Manufacturing'},
+          {name:'Nemak',sector:'Autoparts Manufacturing',what:'Rebalanced EV and ICE investment in real time as market signals changed — managing a portfolio split across two technology cycles.',role:'COO / Head of Production Planning'},
+          {name:'Coca-Cola FEMSA',sector:'Beverage Manufacturing',what:'Running asset optimisation and circular packaging investment simultaneously — competing capital demands from legacy and next-generation infrastructure.',role:'COO / VP Supply Chain'},
+        ],
+        outcomes:['A dual-track operations management framework: how to protect performance when running contraction and growth simultaneously','Peer benchmarks on decision criteria: what triggers a site closure vs. a transformation investment','Cross-sector connections between companies at similar inflection points with structured peer-exchange follow-ups'],
+      },
+      {
+        num:'03', fmt:'Working Lab', fmtBg:'#FDF0E6', fmtColor:'#B85C00',
+        subthemes:['Resource Circularity & Security','Supply Chain Reinforcement'],
+        title:'Circular Operations as a Competitive Differentiator: Delivering on Sustainability Commitments Through the Factory Floor',
+        sub:'Translating boardroom circularity commitments into operational reality — and the cost, margin, and competitive gains that follow',
+        companies:[
+          {name:'Coca-Cola FEMSA',sector:'Beverage Manufacturing',what:'Circular packaging initiative scaling returnable packaging — operational transformation touching every route, depot, and customer relationship.',role:'VP Supply Chain / Head of Packaging Operations'},
+          {name:'Nemak',sector:'Autoparts Manufacturing',what:'Components built from up to 80% recycled materials. New battery housing facilities designed around recycled aluminium from the ground up.',role:'VP Manufacturing / Head of Materials Engineering'},
+          {name:'Grupo Bimbo',sector:'Food Manufacturing',what:'Fleet transition to EVs, 100% renewable electricity, natural preservative transition — multiple circular commitments embedded as operational hard deadlines.',role:'COO / VP Operations'},
+          {name:'Dow Chemicals',sector:'Chemical Manufacturing',what:'Building mechanical recycling facilities. Evaluating sustainable raw material substitutes. CirculenRecover polymers opening new automotive supply relationships.',role:'VP Manufacturing / Head of Circular Economy Operations'},
+          {name:'Alpek',sector:'Chemical Manufacturing',what:'Circularity programmes across multiple product lines — how circular operations reduce input costs while accessing sustainability-conscious customer segments.',role:'COO / Head of Sustainability Operations'},
+        ],
+        outcomes:['Each participant leaves with one specific circular operation decision mapped to their procurement, production, or distribution process','Cross-sector material loop opportunities identified — companies with matching waste streams and input needs introduced','A shared cost and margin impact model for circular operations across sectors'],
+      },
+    ]
+  },
+  {
+    id:'fin', name:'Finance', label:'CFO · VP Finance · Head of Strategy · Head of Corporate Development',
+    invite:'Invite from: Chemical · Electricity · Auto · Autoparts · Food · Beverage · Finance & Insurance · Agriculture',
+    avBg:'#4A3010', avColor:'#D4AB6A', avLabel:'CFO', hdrBg:'#2A1A08',
+    sessions:[
+      {
+        num:'01', fmt:'Panel Discussion', fmtBg:'#FAEEDA', fmtColor:'#854F0B',
+        subthemes:['Cost & Margin Discipline','Asset Optimization & Footprint'],
+        title:'Sequencing Productivity Investment for Maximum Competitive Return',
+        sub:'When capital is limited and every subtheme competes for budget — how the best finance leaders decide what gets funded first, and why',
+        companies:[
+          {name:'Dow Chemicals',sector:'Chemical Manufacturing',what:'Explicitly delayed the Flex-2 capital project to protect near-term cash while continuing other productivity investments — a documented sequencing decision.',role:'CFO / Head of Capital Allocation'},
+          {name:'Nemak',sector:'Autoparts Manufacturing',what:'Rebalanced EV and ICE investment in real time as market signals changed — mid-cycle capital resequencing requiring COO, CFO, and board alignment.',role:'CFO / Head of Corporate Finance'},
+          {name:'TC Energy',sector:'Electricity Services',what:'Managing parallel multi-billion capital programmes — pipeline modernisation, new construction, and asset renewal with different risk profiles.',role:'CFO / VP Capital Projects Finance'},
+          {name:'Cydsa',sector:'Chemical Manufacturing',what:'Prioritised operational capex to stabilise before transforming — deliberate choice to sequence infrastructure reliability ahead of digital investment.',role:'CFO / VP Finance'},
+          {name:'Grupo Nacional Provincial',sector:'Finance & Insurance',what:'Running margin improvement and energy alignment investments simultaneously inside a financial institution with strict regulatory constraints on capital.',role:'CFO / Head of Finance & Investment'},
+        ],
+        outcomes:['A capital sequencing framework for productivity investment — ranked by competitive return per peso, by sector context','Peer benchmarks on which subthemes are generating measurable EBITDA improvement fastest across sectors','Decision criteria for when to delay a productivity investment vs. when delay itself becomes a competitive cost'],
+      },
+      {
+        num:'02', fmt:'Panel Discussion', fmtBg:'#FAEEDA', fmtColor:'#854F0B',
+        subthemes:['Ecosystem Partnerships & Investments','Process Digitization'],
+        title:'Acquiring Competitive Capability: When M&A Delivers Productivity Faster Than Building It',
+        sub:'The strategic and financial logic behind acquisition-led productivity — from companies that bought capability and companies that built it',
+        companies:[
+          {name:'Orbia',sector:'Plastics Manufacturing',what:'Acquired Bow Plumbing Group to extend Building & Infrastructure capability into a new geography faster than greenfield entry would allow.',role:'CFO / Head of M&A and Corporate Development'},
+          {name:'LyondellBasell de Mexico',sector:'Chemical Manufacturing',what:'Acquired full ownership of Clear Path Recycling — buying circular economy capability at industrial scale rather than building it over five years.',role:'CFO / VP Corporate Development'},
+          {name:'Carso Energy',sector:'Electricity Services',what:'Invested $530 million to acquire PetroBal Upstream — repositioning competitive footprint and operational capability in one transaction.',role:'CFO / Head of Corporate Finance'},
+          {name:'Cargill de México',sector:'Animal Breeding & Livestock',what:'Purchased two processing facilities to expand production and distribution — acquiring existing operational capacity in a sector with long build lead times.',role:'CFO / VP Corporate Development'},
+          {name:'NatureSweet',sector:'Agriculture',what:'Chose organic capability growth through new variety launches — a deliberate alternative that brings discipline and a different risk profile to the debate.',role:'CFO / CEO'},
+        ],
+        outcomes:['A build vs. buy vs. partner decision framework calibrated to sector context, capability type, and available capital','Real integration cost benchmarks — what M&A-led productivity actually costs beyond the deal price','Introductions between companies seeking productivity capability and those who have acquired it successfully'],
+      },
+      {
+        num:'03', fmt:'Deal Room', fmtBg:'#EAF3DE', fmtColor:'#3B6D11',
+        subthemes:['Energy & Climate Alignment','Ecosystem Partnerships & Investments'],
+        title:'Unlocking Sustainable Finance to Fund Your Productivity Transformation',
+        sub:'How leading companies access green bonds, sustainability-linked loans, and PPAs — and the pathway for mid-market companies to get there',
+        companies:[
+          {name:'Acciona Energy México',sector:'Electricity Services',what:'Issued €973m in green bonds. Can describe reporting requirements, investor covenants, and the ongoing cost of maintaining the instrument.',role:'CFO / Head of Capital Markets'},
+          {name:'Aptar',sector:'Plastics Manufacturing',what:'Signed Power Purchase Agreements in Europe and the US — a mid-size manufacturer that successfully structured green financing.',role:'CFO / VP Sustainability Finance'},
+          {name:'Nemak',sector:'Autoparts Manufacturing',what:'Issued Sustainability-Linked Bonds tied to emissions-reduction targets — can describe the KPI negotiation and consequences of missing targets.',role:'CFO / Head of Treasury'},
+          {name:'Gentera',sector:'Finance & Insurance',what:'Provider side — a Mexican financial institution describing what they require from mid-market borrowers to structure accessible green finance instruments.',role:'CFO / Head of Sustainable Finance'},
+          {name:'Coliman Bananas · Ganfer',sector:'Agriculture',what:'Small agriculture companies with sustainability commitments and no green finance access — present as capital seekers to ground the room in real demand.',role:'CEO / CFO'},
+        ],
+        outcomes:['A step-by-step pathway for mid-market companies to access sustainability-linked finance within 18 months','At least 3 structured financing conversations initiated between providers and mid-market capital seekers','A term sheet sketch for one pooled sustainability instrument accessible to smaller operators'],
+      },
+    ]
+  },
+  {
+    id:'tech', name:'Technology', label:'CTO · CDO · Head of Innovation · Head of Digital Transformation',
+    invite:'Invite from: Real Estate · Electricity · Plastics · Chemical · Autoparts · Education · Animal Breeding · Wholesale Trade',
+    avBg:'#2A1A6B', avColor:'#AFA9EC', avLabel:'CTO', hdrBg:'#150D3A',
+    sessions:[
+      {
+        num:'01', fmt:'Panel Discussion', fmtBg:'#EEEDFE', fmtColor:'#3C3489',
+        subthemes:['Data & Intelligent Systems','Process Digitization'],
+        title:'AI for Competitive Productivity: The Build, Buy, or Configure Decision That Defines Your Digital Decade',
+        sub:'What companies that built proprietary AI, deployed third-party platforms, and configured existing tools have actually learned — and which path delivers gains fastest',
+        companies:[
+          {name:'JLL',sector:'Real Estate',what:'Built Azara — a proprietary AI platform for corporate real estate data analysis. Total cost of ownership and competitive differentiation it delivers.',role:'CTO / Chief Digital Officer'},
+          {name:'ITESM (Tec de Monterrey)',sector:'Education Services',what:'Built TechGPT and made it openly available — uniquely positioned to speak about the gap between building AI capability and achieving adoption.',role:'VP Innovation / CTO'},
+          {name:'Nemak',sector:'Autoparts Manufacturing',what:'Built NorisGPT for manufacturing process monitoring — an industrial operator who built sector-specific AI without a technology company background.',role:'CTO / Head of Digital Manufacturing'},
+          {name:'Repsol Downstream México',sector:'Wholesale Trade',what:'Deployed AI across all business areas using existing infrastructure — the configure-and-scale approach with no proprietary build cycle.',role:'CTO / Head of Digital Transformation'},
+          {name:'Tyson Foods',sector:'Animal Breeding & Livestock',what:'Deployed AI and data systems across livestock and processing — a non-tech sector choosing between paths with no prior AI experience.',role:'CTO / Head of Digital Operations'},
+        ],
+        outcomes:['A sector-by-sector AI pathway map — which entry approach delivers fastest productivity gain at which digital maturity stage','Real total cost of ownership benchmarks for build, buy, and configure across different company sizes and sectors','Introductions between companies with deployed AI and sectors seeking to adopt — peer learning connections confirmed'],
+      },
+      {
+        num:'02', fmt:'Live Scenario', fmtBg:'#FCEBEB', fmtColor:'#791F1F',
+        subthemes:['Data & Intelligent Systems','Innovation & Capability Development'],
+        title:'Protecting Your Productivity Infrastructure: Cybersecurity as Operational Resilience and Competitive Necessity',
+        sub:'As digital investment grows, so does exposure — how leading companies are securing AI and automation assets without slowing transformation',
+        companies:[
+          {name:'Dow Chemicals',sector:'Chemical Manufacturing',what:'Runs cyber crisis simulations designed around operational technology threats — one of the most mature industrial OT security programmes in the dataset.',role:'CTO / CISO / Head of OT Security'},
+          {name:'Acciona Energy México',sector:'Electricity Services',what:'ISO 27001/2022 certified. Cybersecurity tracked as board-level strategic risk. 95% supplier risk visibility across the operation.',role:'CTO / CISO / Director of Information Security'},
+          {name:'Sonoco',sector:'Plastics Manufacturing',what:'Implementing the NIST Cybersecurity Framework — a structured, documented approach directly replicable by sectors with less mature programmes.',role:'CTO / CISO'},
+          {name:'Linde Mexico',sector:'Chemical Manufacturing',what:'Running mandatory cybersecurity training and awareness programmes — addressing the human layer most technical frameworks leave exposed.',role:'CTO / Head of IT Security'},
+          {name:'Grupo Bafar · Tyson Foods',sector:'Food / Animal Breeding',what:'Significant and growing digital operations with no documented cybersecurity programmes — their vulnerability grounds the session in real risk.',role:'CTO / COO'},
+        ],
+        outcomes:['A cyber resilience audit template for productivity infrastructure — each participant leaves with a scored self-assessment','A sector-appropriate security framework recommendation: which standard fits which digital maturity level','Peer introductions between companies with mature OT security programmes and those building theirs'],
+      },
+    ]
+  },
+  {
+    id:'esg', name:'Sustainability', label:'CSO · VP ESG · Head of Sustainability · Director of Environmental Strategy',
+    invite:'Invite from: Chemical · Beverage · Electricity · Food · Autoparts · Plastics · Agriculture · Construction',
+    avBg:'#0D3D28', avColor:'#6FCAA0', avLabel:'CSO', hdrBg:'#061F14',
+    sessions:[
+      {
+        num:'01', fmt:'Panel Discussion', fmtBg:'#E1F5EE', fmtColor:'#085041',
+        subthemes:['Energy & Climate Alignment','Resource Circularity & Security'],
+        title:'Energy Transition as a Competitive Lever: From Operational Cost Reduction to Market Advantage',
+        sub:'How companies across sectors are turning energy investment into measurable competitive gains — and what level of ambition actually moves the needle',
+        companies:[
+          {name:'Dow Chemicals',sector:'Chemical Manufacturing',what:'Advancing a small modular nuclear reactor project with X-energy for industrial heat and power — the highest-ambition energy investment in the dataset.',role:'CSO / Head of Energy Strategy'},
+          {name:'Cuervo',sector:'Beverage Manufacturing',what:'Installing biogas burners in the distillery to maximise use of by-products — a practical, low-capital, high-impact energy initiative replicable across Food and Beverage.',role:'CSO / Head of Operations Sustainability'},
+          {name:'Acciona Energy México',sector:'Electricity Services',what:'1.6 GW of signed PPAs. Replacing 1.75 million litres of fossil diesel with HVO. Energy transition at operational scale.',role:'CSO / Head of Renewable Energy Development'},
+          {name:'Coca-Cola FEMSA',sector:'Beverage Manufacturing',what:'Electric boilers powered entirely by solar panels — clean industrial heat investment reducing energy cost and carbon exposure simultaneously.',role:'CSO / VP Sustainability'},
+          {name:'Grupo Bimbo',sector:'Food Manufacturing',what:'100% renewable electricity commitment. Fleet EV transition. Multiple energy commitments operationally embedded with hard deadlines.',role:'CSO / Head of Environmental Strategy'},
+        ],
+        outcomes:['A sector energy ambition ladder: realistic entry points and competitive return expectations by sector and company size','Cross-sector energy partnership opportunities — PPA sharing, co-investment in generation, joint procurement identified','A shared framework for calculating competitive return on energy investment beyond carbon metrics'],
+      },
+      {
+        num:'02', fmt:'Panel Discussion', fmtBg:'#E1F5EE', fmtColor:'#085041',
+        subthemes:['Resource Circularity & Security','Cost & Margin Discipline'],
+        title:'Sustainability That Strengthens the Business Case: Connecting ESG Investment to Competitive Performance',
+        sub:'How the most effective CSOs are linking sustainability programmes to margin improvement, capital access, and customer retention',
+        companies:[
+          {name:'AB InBev (Anheuser-Busch)',sector:'Beverage Manufacturing',what:'Framed water stewardship as operational cost and resilience strategy — translating environmental investment into financial language capital committees approve.',role:'CSO / VP Sustainability'},
+          {name:'Nemak',sector:'Autoparts Manufacturing',what:'Linked sustainability to financing cost through SLBs — created a direct financial mechanism where missing ESG targets raises the cost of capital.',role:'CSO / Head of ESG Finance'},
+          {name:'Alpek',sector:'Chemical Manufacturing',what:'Running circularity programmes with CFO co-ownership — demonstrates how to get sustainability investment into the capital plan, not just the report.',role:'CSO / VP Finance for Sustainability'},
+          {name:'Pochteca Group',sector:'Chemical Manufacturing',what:'Developed green catalogue products with commercial team involvement — turning sustainability into a revenue line, not a cost management tool.',role:'CSO / VP Commercial Sustainability'},
+          {name:'Coliman Bananas · Ganfer',sector:'Agriculture',what:'Small companies making sustainability investments without large corporate structures — the business case at their scale is purely customer access and cost.',role:'CEO / Head of Sustainability'},
+        ],
+        outcomes:['A competitive performance business case template for ESG investment — adaptable by sector and company size','Peer benchmarks on which sustainability investments have delivered measurable margin, financing, or customer access gains','Cross-sector introductions between CSOs who have won the internal argument and those still building the case'],
+      },
+    ]
+  },
+  {
+    id:'ppl', name:'People', label:'CHRO · VP People · Head of Talent · Head of Learning & Development',
+    invite:'Invite from: Auto · Autoparts · Electricity · Chemical · Plastics · Construction · Education · Agriculture',
+    avBg:'#4A1A10', avColor:'#F0997B', avLabel:'CHRO', hdrBg:'#260D07',
+    sessions:[
+      {
+        num:'01', fmt:'Panel Discussion', fmtBg:'#FAECE7', fmtColor:'#712B13',
+        subthemes:['Workforce Transformation & Skills','Innovation & Capability Development'],
+        title:'Building the Workforce Your Competitive Future Demands: Three Strategies, Real Results',
+        sub:'What expanding capability, investing in inclusion, and strategic rationalisation each deliver for productivity — and how to choose the right path for your sector',
+        companies:[
+          {name:'Toyota',sector:'Automobile Manufacturing',what:'Building a 10,000-person internal software development capability — investing in owning the skills that will define automotive competitiveness rather than outsourcing them.',role:'CHRO / VP Human Capital'},
+          {name:'Acciona Energy México',sector:'Electricity Services',what:'Hired 568 people through the ONCE Fundación Inserta disability partnership — workforce expansion through structured inclusion at operational scale.',role:'CHRO / VP People & Inclusion'},
+          {name:'Valeo',sector:'Autoparts Manufacturing',what:'Cutting 1,000 jobs and closing two plants while strengthening local supply partnerships — workforce reduction as a focused productivity decision, not a crisis response.',role:'CHRO / VP HR Operations'},
+          {name:'Penoles',sector:'Electricity Services',what:'Implementing Mina Smart to maintain productivity and safe processes — technology-augmented workforce improving output per person rather than growing headcount.',role:'CHRO / VP Workforce Development'},
+          {name:'Grupo Posadas · NatureSweet',sector:'Hotels / Agriculture',what:'Sectors with limited workforce transformation activity — present to ground the conversation in constraints most mid-market companies actually face.',role:'CHRO / Head of People'},
+        ],
+        outcomes:['A workforce strategy decision matrix: which approach fits which sector context, talent availability, and competitive timeline','Measurable productivity outcomes from each strategy — what each approach has actually delivered in implementing companies','Peer connections between companies at similar workforce decision points with structured follow-up meetings confirmed'],
+      },
+      {
+        num:'02', fmt:'Live Matching', fmtBg:'#EAF3DE', fmtColor:'#3B6D11',
+        subthemes:['Ecosystem Partnerships & Investments','Workforce Transformation & Skills'],
+        title:'Closing the Skills Gap for Competitiveness: Connecting Industry Demand Directly to Educational Supply',
+        sub:'A live exchange between the companies that need critical skills and the institutions that can produce them — with partnerships formed in the room',
+        companies:[
+          {name:'ITESM (Tec de Monterrey)',sector:'Education Services',what:'Clean Mobility research ecosystem. TechGPT platform. Doctoral professorship pipeline. Can describe at volume the skills being produced and the missing industry connections.',role:'VP Industry Partnerships / Head of Career Services'},
+          {name:'UAM · IPN',sector:'Education Services',what:'Compostable biopolymers, sargassum construction materials, circular economy research — graduates with specific technical capability that industry is not yet systematically hiring.',role:'VP Research Partnerships / Head of Technology Transfer'},
+          {name:'BASF',sector:'Chemical Manufacturing',what:'Running function-specific capability programmes across multiple subthemes. Can describe precisely which skills gaps they cannot fill from the current talent market.',role:'CHRO / Head of Talent Acquisition'},
+          {name:'Jabil Circuit de México',sector:'Electronics Manufacturing',what:'Capability investment across 4 productivity subthemes in high-tech manufacturing — one of the highest-density multi-theme operators with significant skills demand.',role:'CHRO / Head of Workforce Development'},
+          {name:'Grupo Mexico Infraestructura',sector:'Construction',what:'Capability investment across 4 subthemes — technical, digital, and sustainability skills gaps that university programmes are not currently meeting at the scale required.',role:'CHRO / VP Talent'},
+        ],
+        outcomes:['A skills supply-demand gap map for Mexico\'s 20 sectors — which capabilities are being produced, which are missing, which sectors are most exposed','At least 5 direct university-company talent pipeline or research partnership conversations initiated with confirmed next steps','A shared talent partnership framework — what industry and education each need to commit to for a pipeline to function at scale'],
+      },
+    ]
+  },
+  {
+    id:'str', name:'Strategy', label:'CEO · Managing Director · Chief Strategy Officer · President',
+    invite:'Invite from: Electricity · Chemical · Plastics · Food · Beverage · Auto · Agriculture · Education · Finance',
+    avBg:'#1A2B3C', avColor:'#8AAAC4', avLabel:'CEO', hdrBg:'#0D1F35',
+    sessions:[
+      {
+        num:'01', fmt:'CEO Panel', fmtBg:'#E6F1FB', fmtColor:'#185FA5',
+        subthemes:['Process Digitization','Data & Intelligent Systems'],
+        title:'Growing Smarter, Not Just Bigger: Ensuring Geographic Expansion Drives Competitiveness, Not Just Scale',
+        sub:'When market expansion improves productivity and competitive position — and when it dilutes both — from CEOs who have navigated both outcomes',
+        companies:[
+          {name:'Gentera',sector:'Finance & Insurance',what:'Expanded service network to 553 offices — speaks directly to what growth did to cost per client and competitive position across markets at different maturity stages.',role:'CEO / Chief Strategy Officer'},
+          {name:'Grupo Ruba',sector:'Construction',what:'Opened six new cities simultaneously while consolidating existing operations — rapid geographic entry across markets with very different cost structures.',role:'CEO / VP Strategy'},
+          {name:'NatureSweet',sector:'Agriculture',what:'Tripled home delivery service radius — geographic expansion with direct unit economics consequences that tests whether growth improves or dilutes margin.',role:'CEO / COO'},
+          {name:'Acciona Energy México',sector:'Electricity Services',what:'Added 333 MW across India, Australia, and Canada while managing a complex domestic productivity agenda — international expansion competing with domestic transformation.',role:'CEO / Chief Strategy Officer'},
+          {name:'Grupo Bimbo',sector:'Food Manufacturing',what:'Global expansion at scale while sustaining operational productivity — one of the few companies in the dataset demonstrably doing both simultaneously.',role:'CEO / Chief Strategy Officer'},
+        ],
+        outcomes:['A growth quality framework: criteria for evaluating whether an expansion decision will improve or dilute competitive productivity','Peer benchmarks on unit economics before and after geographic expansion — what improvement looks like in real numbers','Cross-sector connections between CEOs managing similar expansion decisions in different market contexts'],
+      },
+      {
+        num:'02', fmt:'Deal Room', fmtBg:'#EAF3DE', fmtColor:'#3B6D11',
+        subthemes:['Supply Chain Reinforcement','Resource Circularity & Security'],
+        title:'Securing the Inputs That Will Define Your Competitive Position in 2030',
+        sub:'The critical supply chain decisions being made now — and the strategic partnerships available to companies ready to act',
+        companies:[
+          {name:'Dow · Alpek · Cydsa · Linde Mexico',sector:'Chemical Manufacturing',what:'Forming critical mineral alliances, building recycling capacity, securing new production. Chemical companies are the upstream supply anchor for most sectors in the room.',role:'CEO / Chief Strategy Officer'},
+          {name:'Borgwarner Morse Systems México',sector:'Autoparts Manufacturing',what:'Developing next-generation EV power modules — positioning for component supply that will be scarce and competitively decisive by 2027 if not secured now.',role:'CEO / VP Strategy'},
+          {name:'Cargill de México',sector:'Animal Breeding & Livestock',what:'Launched Seascale Energy joint venture with Hafnia to secure marine fuel supply — a cross-sector supply security decision made proactively rather than reactively.',role:'CEO / Chief Strategy Officer'},
+          {name:'Orbia',sector:'Plastics Manufacturing',what:'R&D investment in LGWP refrigerant gases ahead of regulatory phase-outs — forward raw material positioning before scarcity creates a competitive premium.',role:'CEO / Chief Strategy Officer'},
+          {name:'Grupo Bimbo · Arca Continental',sector:'Food Manufacturing',what:'Significant agricultural raw material dependency with limited upstream supply security — present as motivated buyers and the demand signal that makes conversations meaningful.',role:'CEO / Chief Procurement Officer'},
+        ],
+        outcomes:['At least 4 bilateral supply security conversations initiated between anchors and dependents with confirmed follow-up structure','2 MoU frameworks sketched for long-term supply agreements between cross-sector pairs','A critical input risk map for participating companies — where they are exposed and what securing each input requires'],
+      },
+    ]
+  },
+];
+
+// ── EXPLORER LOGIC ──────────────────────────────────────────────
+let state={level:0,subtheme:null,sector:null,fn:null};
+
+function render(){
+  const c=document.getElementById('content');
+  c.className='slide-in';
+  setTimeout(()=>c.className='',300);
+  if(state.level===0)renderL0();
+  else if(state.level===1)renderL1();
+  else if(state.level===2)renderL2();
+  else if(state.level===3)renderL3();
+  updateBreadcrumb();
+}
+
+function renderL0(){
+  const max=Math.max(...subthemes.map(s=>s.count));
+  let h=`<div class="level-header"><div class="level-label">Step 1 of 4 — Select a subtheme</div><div class="level-title">10 Productivity Subthemes</div><div class="level-desc">Click any bar to see which sectors are most active in that theme.</div></div><div class="bars">`;
+  subthemes.forEach(s=>{
+    const p=Math.round((s.count/max)*100);
+    h+=`<div class="bar-item" style="color:${s.color}" onclick="drillS('${s.id}')"><div><div class="bar-label">${s.name}</div><div class="bar-sublabel">${s.pct} of all initiatives</div></div><div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${s.color}"></div></div><div class="bar-count" style="color:${s.color}">${s.count.toLocaleString()}</div></div>`;
+  });
+  h+=`</div>`;
+  document.getElementById('content').innerHTML=h;
+  animateBars();
+}
+
+function renderL1(){
+  const st=subthemes.find(s=>s.id===state.subtheme);
+  const data=sectors[state.subtheme]||[];
+  const max=Math.max(...data.map(d=>d.n));
+  let h=`<div class="back-btn" onclick="goBack()">← Back to subthemes</div><div class="level-header"><div class="level-label">Step 2 of 4 — Select a sector</div><div class="level-title">Sectors active in ${st.name}</div><div class="level-desc">Click a sector to see which functions are driving this agenda.</div></div><div class="bars">`;
+  data.forEach(d=>{
+    const p=Math.round((d.n/max)*100);
+    h+=`<div class="bar-item" style="color:${st.color}" onclick="drillSec('${d.s.replace(/'/g,"\\'")}')"><div><div class="bar-label">${d.s}</div><div class="bar-sublabel">initiatives in ${st.name}</div></div><div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${st.color}"></div></div><div class="bar-count" style="color:${st.color}">${d.n}</div></div>`;
+  });
+  h+=`</div>`;
+  document.getElementById('content').innerHTML=h;
+  animateBars();
+}
+
+function renderL2(){
+  const st=subthemes.find(s=>s.id===state.subtheme);
+  const data=(functions[state.subtheme]||[]).filter(d=>d.n>0);
+  const max=Math.max(...data.map(d=>d.n));
+  let h=`<div class="back-btn" onclick="goBack()">← Back to sectors</div><div class="level-header"><div class="level-label">Step 3 of 4 — Select a function</div><div class="level-title">Decision-making functions in ${st.name}</div><div class="level-desc">Click a function to see the recommended session and companies to invite.</div></div><div style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;background:${st.color}18;color:${st.color};margin-bottom:1rem;border:1px solid ${st.color}30"><span style="width:8px;height:8px;border-radius:50%;background:${st.color};display:inline-block"></span>Sector: ${state.sector}</div><div class="bars">`;
+  data.forEach(d=>{
+    const p=Math.round((d.n/max)*100);
+    h+=`<div class="bar-item" style="color:${st.color}" onclick="drillFn('${d.fn.replace(/'/g,"\\'")}')"><div><div class="bar-label">${d.fn}</div><div class="bar-sublabel">${d.role}</div></div><div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${st.color}"></div></div><div class="bar-count" style="color:${st.color}">${d.n}</div></div>`;
+  });
+  h+=`</div>`;
+  document.getElementById('content').innerHTML=h;
+  animateBars();
+}
+
+function renderL3(){
+  const st=subthemes.find(s=>s.id===state.subtheme);
+  const s=drillSessions[state.fn]||drillSessions['Capital & Capability'];
+  let h=`<div class="back-btn" onclick="goBack()">← Back to functions</div><div class="level-header"><div class="level-label">Step 4 of 4 — Recommended session</div><div class="level-title">Session for: ${state.fn}</div><div class="level-desc">Based on your selection — <strong>${st.name}</strong> · ${state.sector} · ${state.fn}</div></div><div class="session-card"><div class="session-card-header" style="border-left-color:${st.color}"><div class="session-card-top"><div class="session-card-title">${s.title}</div><div class="session-format" style="background:${s.fc};color:${s.ft}">${s.format}</div></div><div class="session-card-sub">${s.sub}</div></div><div class="session-card-body"><div class="sc-section-label">Companies to invite</div><div class="company-list">`;
+  s.companies.forEach(c=>{
+    h+=`<div class="co-item"><div class="co-item-header"><span class="co-item-name">${c.name}</span><span class="co-item-sector">${c.sector}</span></div><div class="co-item-what">${c.what}</div><div class="co-item-role">${c.role}</div></div>`;
+  });
+  h+=`</div><div class="sc-section-label">Session outcomes</div><div class="outcomes-box"><div class="outcomes-label">What this session delivers</div>`;
+  s.outcomes.forEach(o=>h+=`<div class="outcome-row"><div class="outcome-dot"></div><span>${o}</span></div>`);
+  h+=`</div></div></div>`;
+  document.getElementById('content').innerHTML=h;
+}
+
+function drillS(id){state.subtheme=id;state.level=1;render();}
+function drillSec(s){state.sector=s;state.level=2;render();}
+function drillFn(fn){state.fn=fn;state.level=3;render();}
+function goBack(){
+  state.level--;
+  if(state.level<1)state.subtheme=null;
+  if(state.level<2)state.sector=null;
+  if(state.level<3)state.fn=null;
+  render();
+}
+
+function updateBreadcrumb(){
+  const bc=document.getElementById('breadcrumb');
+  const st=state.subtheme?subthemes.find(s=>s.id===state.subtheme):null;
+  let items=[{label:'All subthemes',active:state.level===0,cb:()=>{state={level:0,subtheme:null,sector:null,fn:null};render();}}];
+  if(st) items.push({label:st.name,dot:st.color,active:state.level===1,cb:()=>{state.level=1;state.sector=null;state.fn=null;render();}});
+  if(state.sector) items.push({label:state.sector,dot:st.color,active:state.level===2,cb:()=>{state.level=2;state.fn=null;render();}});
+  if(state.fn) items.push({label:state.fn,dot:st?st.color:null,active:true,cb:null});
+  bc.innerHTML=items.map((item,i)=>{
+    const dot=item.dot?`<span class="bc-dot" style="background:${item.dot}"></span>`:'';
+    const cls=`bc-item${item.active?' active':''}`;
+    const oc=(!item.active&&item.cb)?`onclick="bcClick(${i})"`:'';
+    return(i>0?'<span class="bc-sep">›</span>':'')+`<span class="${cls}" ${oc}>${dot}${item.label}</span>`;
+  }).join('');
+  window._bcHandlers=items.map(i=>i.cb);
+}
+
+function bcClick(i){if(window._bcHandlers&&window._bcHandlers[i])window._bcHandlers[i]();}
+function animateBars(){
+  const fills=document.querySelectorAll('.bar-fill');
+  const ws=Array.from(fills).map(f=>f.style.width);
+  fills.forEach(f=>f.style.width='0');
+  requestAnimationFrame(()=>setTimeout(()=>fills.forEach((f,i)=>f.style.width=ws[i]),50));
+}
+
+// ── TOPICS TAB LOGIC ────────────────────────────────────────────
+let currentFilter='all';
+
+function buildTopics(){
+  const container=document.getElementById('topics-content');
+  let html='';
+  topicFunctions.forEach(fn=>{
+    const vis=currentFilter==='all'||currentFilter===fn.id;
+    if(!vis){html+=`<div class="fn-block" id="fn-${fn.id}" style="display:none"></div>`;return;}
+    html+=`<div class="fn-block" id="fn-${fn.id}">
+      <div class="fn-block-header" style="background:${fn.hdrBg}">
+        <div class="fn-block-av" style="background:${fn.avBg};color:${fn.avColor}">${fn.avLabel}</div>
+        <div>
+          <div class="fn-block-name">${fn.name}</div>
+          <div class="fn-block-roles">${fn.label}</div>
+          <div class="fn-block-invite">${fn.invite}</div>
+        </div>
+      </div>
+      <div class="topic-cards">`;
+    fn.sessions.forEach((sess,si)=>{
+      const bodyId=`body-${fn.id}-${si}`;
+      const chevId=`chev-${fn.id}-${si}`;
+      const stPills=sess.subthemes.map(st=>{
+        const stObj=subthemes.find(s=>s.name===st);
+        const c=stObj?stObj.color:'#888';
+        return `<span class="t-pill" style="background:${c}18;color:${c};border:1px solid ${c}30">${st}</span>`;
+      }).join('');
+      html+=`<div class="topic-row">
+        <div class="topic-top" onclick="toggleTopic('${bodyId}','${chevId}')">
+          <div>
+            <div class="t-num">Session ${sess.num}</div>
+            <div class="t-title">${sess.title}</div>
+            <div class="t-sub">${sess.sub}</div>
+            <div class="t-pills">
+              <span class="t-pill" style="background:${sess.fmtBg};color:${sess.fmtColor}">${sess.fmt}</span>
+              ${stPills}
+            </div>
+          </div>
+          <div class="topic-chevron" id="${chevId}">▼</div>
+        </div>
+        <div class="topic-body" id="${bodyId}">
+          <div class="tb-label">Companies to invite — and why they belong in this session</div>
+          <div class="tb-companies">`;
+      sess.companies.forEach(c=>{
+        html+=`<div class="tb-co">
+          <div class="tb-co-hd"><span class="tb-co-name">${c.name}</span><span class="tb-co-sec">${c.sector}</span></div>
+          <div class="tb-co-what">${c.what}</div>
+          <div class="tb-co-role">${c.role}</div>
+        </div>`;
+      });
+      html+=`</div>
+          <div class="tb-outcomes">
+            <div class="tb-out-label">Session outcomes</div>`;
+      sess.outcomes.forEach(o=>html+=`<div class="tb-out-row"><div class="tb-out-dot"></div><span>${o}</span></div>`);
+      html+=`</div></div></div>`;
+    });
+    html+=`</div></div>`;
+  });
+  container.innerHTML=html;
+}
+
+function toggleTopic(bodyId,chevId){
+  const b=document.getElementById(bodyId);
+  const c=document.getElementById(chevId);
+  const open=b.classList.toggle('open');
+  c.style.transform=open?'rotate(180deg)':'';
+}
+
+function filterFn(id,btn){
+  currentFilter=id;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  buildTopics();
+}
+
+// ── TAB SWITCHING ───────────────────────────────────────────────
+function switchTab(tab,btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── INIT ────────────────────────────────────────────────────────
+render();
+buildTopics();
+</script>
+</body>
+</html>
